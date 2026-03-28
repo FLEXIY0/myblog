@@ -161,6 +161,28 @@ function escapeHtml(unsafe) {
          .replace(/'/g, "&#039;");
 }
 
+function parseMarkdownImages(text) {
+    // Регулярка для ![alt](url)
+    const regex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+    return text.replace(regex, `<img src="$2" alt="$1" style="max-width: 100%; height: auto; display: block; border-radius: 4px; margin: 1.5rem 0;" loading="lazy">`);
+}
+
+function insertImageTemplate(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const template = `\n![Описание](https://ссылка-на-фото.jpg)\n`;
+    const text = textarea.value;
+    textarea.value = text.substring(0, start) + template + text.substring(end);
+    textarea.focus();
+    
+    // Выделяем часть с ссылкой, чтобы юзеру было легко её заменить
+    const urlStart = start + 14; 
+    const urlEnd = urlStart + 24; 
+    textarea.setSelectionRange(urlStart, urlEnd);
+}
+
 function encodeBase64Unicode(str) {
     return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
         function toSolidBytes(match, p1) {
@@ -386,9 +408,12 @@ function renderPosts() {
                 <span style="font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">версия: ${post.versions.length}</span>
             </div>
             
-            <div class="post-content" id="content-${post.id}">${escapeHtml(currentText)}</div>
+            <div class="post-content" id="content-${post.id}">${parseMarkdownImages(escapeHtml(currentText))}</div>
             
             <div class="hidden" id="edit-form-${post.id}" style="margin-top: 1rem;">
+                <div style="margin-bottom: 8px;">
+                    <button type="button" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border: 1px dashed var(--btn-border);" onclick="insertImageTemplate('edit-text-${post.id}')">📷 прикрепить картинку</button>
+                </div>
                 <textarea id="edit-text-${post.id}">${escapeHtml(currentText)}</textarea>
                 <div style="margin-top: 10px; display: flex; gap: 10px;">
                     <button class="btn-success" onclick="saveEditing(${post.id})">Сохранить</button>
@@ -418,7 +443,7 @@ function showVersion(postId, versionIndex) {
     const post = posts.find(p => p.id === postId);
     if (!post || !post.versions[versionIndex]) return;
     
-    document.getElementById(`content-${postId}`).innerHTML = escapeHtml(post.versions[versionIndex].text);
+    document.getElementById(`content-${postId}`).innerHTML = parseMarkdownImages(escapeHtml(post.versions[versionIndex].text));
     
     const textarea = document.getElementById(`edit-text-${postId}`);
     if (textarea) {
