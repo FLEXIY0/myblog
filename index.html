@@ -23,8 +23,8 @@
         <!-- Форма для добавления нового поста -->
         <div class="post-form">
             <div style="margin-bottom: 8px;">
-                <input type="file" id="image-upload-new" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'new-post-text')">
-                <button type="button" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border: 1px dashed var(--btn-border);" onclick="document.getElementById('image-upload-new').click()">📷 Загрузить фото из Галереи</button>
+                <input type="file" id="image-upload-new" accept="image/*,video/mp4,video/webm" style="display:none" onchange="handleImageUpload(event, 'new-post-text')">
+                <button type="button" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border: 1px dashed var(--btn-border);" onclick="document.getElementById('image-upload-new').click()">📷 Загрузить фото/GIF (MP4)</button>
             </div>
             <textarea id="new-post-text" placeholder="О чем вы думаете?"></textarea>
             <div style="margin-top: 10px; text-align: right;">

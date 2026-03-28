@@ -162,9 +162,13 @@ function escapeHtml(unsafe) {
 }
 
 function parseMarkdownImages(text) {
-    // Регулярка для ![alt](url)
-    const regex = /!\[([^\]]*)\]\(([^\s)]+)\)/g;
-    return text.replace(regex, `<img src="$2" alt="$1" style="max-width: 100%; height: auto; display: block; border-radius: 4px; margin: 1.5rem 0;" loading="lazy">`);
+    // Регулярка для видео (!v[alt](url))
+    const videoRegex = /!v\[([^\]]*)\]\(([^\s)]+)\)/g;
+    let parsed = text.replace(videoRegex, `<video src="$2" autoplay loop muted playsinline style="max-width: 100%; display: block; border-radius: 4px; margin: 1.5rem 0;" title="$1"></video>`);
+    
+    // Регулярка для картинок (![alt](url))
+    const imgRegex = /!\[([^\]]*)\]\(([^\s)]+)\)/g;
+    return parsed.replace(imgRegex, `<img src="$2" alt="$1" style="max-width: 100%; height: auto; display: block; border-radius: 4px; margin: 1.5rem 0;" loading="lazy">`);
 }
 
 async function handleImageUpload(event, textareaId) {
@@ -182,10 +186,12 @@ async function handleImageUpload(event, textareaId) {
         return;
     }
 
+    const isVideo = file.type.startsWith('video/');
+
     // Вставляем заглушку в текстовое поле
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const placeholder = `\n![Загрузка фото...]\n`;
+    const placeholder = `\n[Загрузка медиа...]\n`;
     const text = textarea.value;
     textarea.value = text.substring(0, start) + placeholder + text.substring(end);
 
@@ -207,7 +213,7 @@ async function handleImageUpload(event, textareaId) {
                 const data = await res.json();
                 imageUrl = data.url;
             } else {
-                const base64Data = base64Full.replace(/^data:image\/\w+;base64,/, "");
+                const base64Data = base64Full.split(',')[1];
                 const githubApiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/images/${safeName}`;
                 
                 const putRes = await fetch(githubApiUrl, {
@@ -217,7 +223,7 @@ async function handleImageUpload(event, textareaId) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        message: "Upload image via blog mobile UI",
+                        message: "Upload media via blog mobile UI",
                         content: base64Data
                     })
                 });
@@ -227,7 +233,8 @@ async function handleImageUpload(event, textareaId) {
             }
 
             // Успех, меняем placeholder
-            textarea.value = textarea.value.replace(placeholder, `\n![фото](${imageUrl})\n`);
+            const markdownTag = isVideo ? `!v[видео](${imageUrl})` : `![фото](${imageUrl})`;
+            textarea.value = textarea.value.replace(placeholder, `\n${markdownTag}\n`);
         } catch (e) {
             alert("Ошибка сети или нет прав.");
             textarea.value = textarea.value.replace(placeholder, "\n[Ошибка загрузки. Возможно вы не ввели токен github]\n");
@@ -512,8 +519,8 @@ function renderPosts() {
             
             <div class="hidden" id="edit-form-${post.id}" style="margin-top: 1rem;">
                 <div style="margin-bottom: 8px;">
-                    <input type="file" id="image-upload-${post.id}" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'edit-text-${post.id}')">
-                    <button type="button" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border: 1px dashed var(--btn-border);" onclick="document.getElementById('image-upload-${post.id}').click()">📷 Загрузить фото</button>
+                    <input type="file" id="image-upload-${post.id}" accept="image/*,video/mp4,video/webm" style="display:none" onchange="handleImageUpload(event, 'edit-text-${post.id}')">
+                    <button type="button" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border: 1px dashed var(--btn-border);" onclick="document.getElementById('image-upload-${post.id}').click()">📷 Загрузить фото/GIF (MP4)</button>
                 </div>
                 <textarea id="edit-text-${post.id}">${escapeHtml(currentText)}</textarea>
                 <div style="margin-top: 10px; display: flex; gap: 10px;">
