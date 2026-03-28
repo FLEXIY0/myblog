@@ -167,20 +167,76 @@ function parseMarkdownImages(text) {
     return text.replace(regex, `<img src="$2" alt="$1" style="max-width: 100%; height: auto; display: block; border-radius: 4px; margin: 1.5rem 0;" loading="lazy">`);
 }
 
-function insertImageTemplate(textareaId) {
+async function handleImageUpload(event, textareaId) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Сбросить input чтобы можно было выбрать тот же файл снова
+    event.target.value = '';
+
     const textarea = document.getElementById(textareaId);
     if (!textarea) return;
+
+    if (!IS_LOCAL && !githubToken) {
+        alert("ОШИБКА: Загружать фото может только автор блога. Пожалуйста, введите GitHub токен во вкладке Редактирование.");
+        return;
+    }
+
+    // Вставляем заглушку в текстовое поле
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const template = `\n![Описание](https://ссылка-на-фото.jpg)\n`;
+    const placeholder = `\n![Загрузка фото...]\n`;
     const text = textarea.value;
-    textarea.value = text.substring(0, start) + template + text.substring(end);
-    textarea.focus();
+    textarea.value = text.substring(0, start) + placeholder + text.substring(end);
+
+    const safeName = Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9.-]/g, '');
+    const reader = new FileReader();
     
-    // Выделяем часть с ссылкой, чтобы юзеру было легко её заменить
-    const urlStart = start + 14; 
-    const urlEnd = urlStart + 24; 
-    textarea.setSelectionRange(urlStart, urlEnd);
+    reader.onload = async () => {
+        const base64Full = reader.result;
+        let imageUrl = '';
+
+        try {
+            if (IS_LOCAL) {
+                const res = await fetch('http://localhost:3000/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: safeName, base64: base64Full })
+                });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                imageUrl = data.url;
+            } else {
+                const base64Data = base64Full.replace(/^data:image\/\w+;base64,/, "");
+                const githubApiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/images/${safeName}`;
+                
+                const putRes = await fetch(githubApiUrl, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${githubToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: "Upload image via blog mobile UI",
+                        content: base64Data
+                    })
+                });
+
+                if (!putRes.ok) throw new Error("GitHub error");
+                imageUrl = `images/${safeName}`; 
+            }
+
+            // Успех, меняем placeholder
+            textarea.value = textarea.value.replace(placeholder, `\n![фото](${imageUrl})\n`);
+        } catch (e) {
+            alert("Ошибка сети или нет прав.");
+            textarea.value = textarea.value.replace(placeholder, "\n[Ошибка загрузки. Возможно вы не ввели токен github]\n");
+        }
+    };
+    reader.onerror = () => {
+         textarea.value = textarea.value.replace(placeholder, "\n[Ошибка чтения файла телефоном]\n");
+    };
+    reader.readAsDataURL(file);
 }
 
 function encodeBase64Unicode(str) {
@@ -412,7 +468,8 @@ function renderPosts() {
             
             <div class="hidden" id="edit-form-${post.id}" style="margin-top: 1rem;">
                 <div style="margin-bottom: 8px;">
-                    <button type="button" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border: 1px dashed var(--btn-border);" onclick="insertImageTemplate('edit-text-${post.id}')">📷 прикрепить картинку</button>
+                    <input type="file" id="image-upload-${post.id}" accept="image/*" style="display:none" onchange="handleImageUpload(event, 'edit-text-${post.id}')">
+                    <button type="button" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border: 1px dashed var(--btn-border);" onclick="document.getElementById('image-upload-${post.id}').click()">📷 Загрузить фото</button>
                 </div>
                 <textarea id="edit-text-${post.id}">${escapeHtml(currentText)}</textarea>
                 <div style="margin-top: 10px; display: flex; gap: 10px;">

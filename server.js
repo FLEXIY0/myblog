@@ -8,7 +8,8 @@ const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'posts.json');
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Раздаем статические файлы (наш фронтенд)
 app.use(express.static(__dirname));
 
@@ -133,6 +134,24 @@ app.delete('/api/posts/:id', (req, res) => {
     posts.splice(postIndex, 1);
     writeData(posts);
     res.json({ message: 'Post deleted' });
+});
+
+// 6. Загрузка картинки
+app.post('/api/upload', (req, res) => {
+    const { filename, base64 } = req.body;
+    if (!filename || !base64) {
+        return res.status(400).json({ error: 'Missing data' });
+    }
+    
+    const imagesDir = path.join(__dirname, 'images');
+    if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir);
+    
+    const base64Data = base64.replace(/^data:image\/\w+;base64,/, "");
+    const filepath = path.join(imagesDir, filename);
+    
+    fs.writeFileSync(filepath, base64Data, 'base64');
+    
+    res.json({ url: `images/${filename}` });
 });
 
 app.listen(PORT, () => {
