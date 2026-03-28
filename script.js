@@ -1,7 +1,7 @@
 const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_URL = IS_LOCAL ? 'http://localhost:3000/api/posts' : 'posts.json';
 
-const GITHUB_REPO = 'FLEXIY0/sys-logs';
+const GITHUB_REPO = 'FLEXIY0/env-testing';
 const GITHUB_PATH = 'posts.json';
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
 let githubToken = localStorage.getItem('myblog_github_token') || '';
