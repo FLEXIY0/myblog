@@ -239,6 +239,36 @@ async function handleImageUpload(event, textareaId) {
     reader.readAsDataURL(file);
 }
 
+// --- Шифрование обхода автоцензоров ---
+const SECRET_KEY = "env-testing-secret-2026-key";
+
+function xorEncryptDecrypt(input) {
+    let output = '';
+    for (let i = 0; i < input.length; i++) {
+        output += String.fromCharCode(input.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length));
+    }
+    return output;
+}
+
+function encryptText(text) {
+    return encodeBase64Unicode(xorEncryptDecrypt(text));
+}
+
+function decryptText(base64text) {
+    try {
+        const xorStr = decodeBase64Unicode(base64text);
+        return xorEncryptDecrypt(xorStr);
+    } catch(e) {
+        return base64text; // Fallback для старых нешифрованных постов
+    }
+}
+
+function decodeBase64Unicode(str) {
+    return decodeURIComponent(atob(str).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+}
+
 function encodeBase64Unicode(str) {
     return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
         function toSolidBytes(match, p1) {
@@ -253,7 +283,12 @@ async function loadPosts() {
         const urlToFetch = IS_LOCAL ? API_URL : `${API_URL}?t=${Date.now()}`;
         const response = await fetch(urlToFetch);
         if (response.ok) {
-            posts = await response.json();
+            let loadedPosts = await response.json();
+            // Расшифровываем тексты на лету
+            posts = loadedPosts.map(p => {
+                 p.versions = p.versions.map(v => ({...v, text: decryptText(v.text)}));
+                 return p;
+            });
             renderPosts();
         } else if (!IS_LOCAL && response.status === 404) {
              posts = [];
@@ -278,7 +313,16 @@ async function pushToGithub(newPostsData) {
         console.log("Возможно, файл еще не создан");
     }
 
-    const content = encodeBase64Unicode(JSON.stringify(newPostsData, null, 2));
+    function encryptPostsArray(arr) {
+        return arr.map(p => {
+            return {
+                ...p,
+                versions: p.versions.map(v => ({ ...v, text: encryptText(v.text) }))
+            };
+        });
+    }
+
+    const content = encodeBase64Unicode(JSON.stringify(encryptPostsArray(newPostsData), null, 2));
     const body = {
         message: "Автоматическое обновление поста с телефона",
         content: content
@@ -305,7 +349,7 @@ async function addPost() {
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({ text: encryptText(text) })
         });
         if (response.ok) {
             newPostText.value = '';
@@ -345,7 +389,7 @@ async function saveEditing(id) {
         const response = await fetch(`${API_URL}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: newText })
+            body: JSON.stringify({ text: encryptText(newText) })
         });
         if (response.ok) await loadPosts();
     } else {
