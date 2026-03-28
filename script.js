@@ -67,6 +67,24 @@ function closePasswordModal() {
     passwordModal.style.display = 'none';
 }
 
+// --- Кастомный Confirm ---
+let confirmResolve = null;
+function showCustomConfirm(msg) {
+    return new Promise(resolve => {
+        document.getElementById('confirm-msg').textContent = msg;
+        document.getElementById('confirm-modal').style.display = 'flex';
+        confirmResolve = resolve;
+    });
+}
+
+function closeConfirmModal(result) {
+    document.getElementById('confirm-modal').style.display = 'none';
+    if (confirmResolve) {
+        confirmResolve(result);
+        confirmResolve = null;
+    }
+}
+
 function logoutGithub() {
     githubToken = '';
     localStorage.removeItem('myblog_github_token');
@@ -282,7 +300,7 @@ async function saveEditing(id) {
 }
 
 async function revertToOriginal(id) {
-    if (!confirm("Вы уверены, что хотите вернуть этот пост к первоначальной версии?")) return;
+    if (!(await showCustomConfirm("Вы уверены, что хотите вернуть этот пост к первоначальной версии?"))) return;
 
     if (IS_LOCAL) {
         const response = await fetch(`${API_URL}/${id}/revert`, { method: 'POST' });
@@ -312,7 +330,7 @@ async function revertToOriginal(id) {
 }
 
 async function deletePost(id) {
-    if (!confirm("Вы уверены, что хотите НАВСЕГДА удалить эту запись?")) return;
+    if (!(await showCustomConfirm("Вы уверены, что хотите НАВСЕГДА удалить эту запись?"))) return;
 
     if (IS_LOCAL) {
         const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });

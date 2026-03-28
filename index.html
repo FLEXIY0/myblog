@@ -50,6 +50,18 @@
         </div>
     </div>
 
+    <!-- Модальное окно подтверждения (замещение встроенного браузерного) -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal">
+            <h2 style="color: var(--danger); font-size: 1.1rem; border-bottom: 1px solid var(--btn-border); padding-bottom: 0.8rem; margin-bottom: 1.5rem;">Внимание</h2>
+            <p id="confirm-msg" style="color: var(--text-color); font-size: 1rem; margin-bottom: 2rem;"></p>
+            <div class="modal-buttons">
+                <button class="btn-secondary" style="border-color: var(--text-muted); color: var(--text-muted);" onclick="closeConfirmModal(false)">ОТМЕНА</button>
+                <button class="btn-danger" style="border-color: var(--danger); color: var(--danger);" onclick="closeConfirmModal(true)">ДА, УВЕРЕН</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
