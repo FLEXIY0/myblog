@@ -323,7 +323,7 @@ function renderPosts() {
 
     posts.forEach(post => {
         const postEl = document.createElement('div');
-        postEl.className = 'glass post';
+        postEl.className = 'post';
         postEl.setAttribute('data-id', post.id);
 
         const originalText = post.versions[0].text;

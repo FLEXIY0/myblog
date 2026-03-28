@@ -8,8 +8,7 @@
 </head>
 <body>
 
-    <header class="glass">
-        <h1>Дневник</h1>
+    <header>
         <div class="toggle-container">
             <span id="mode-label">Просмотр</span>
             <label class="switch">
@@ -21,7 +20,7 @@
 
     <main>
         <!-- Форма для добавления нового поста -->
-        <div class="glass post-form">
+        <div class="post-form">
             <textarea id="new-post-text" placeholder="О чем вы думаете?"></textarea>
             <div style="margin-top: 10px; text-align: right;">
                 <button class="btn-primary" onclick="addPost()">Опубликовать</button>
@@ -34,7 +33,7 @@
 
     <!-- Модальное окно ввода пароля -->
     <div class="modal-overlay" id="password-modal">
-        <div class="glass modal">
+        <div class="modal">
             <h2 id="modal-title">Режим редактирования</h2>
             <p id="modal-desc">Введите кодовую фразу для доступа:</p>
             <input type="password" id="password-input" placeholder="...">
